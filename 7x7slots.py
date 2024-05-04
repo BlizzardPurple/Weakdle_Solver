@@ -2,11 +2,11 @@ import csv
 import tkinter as tk
 from tkinter import messagebox
 
-# Initialize vectors
 attacking_types = ['NORMAL'] * 5
 defending_types = [['NULL', 'NULL'] for _ in range(6)]
 pokemon_types = ["NULL", "NORMAL", "FIRE", "WATER", "ELECTRIC", "GRASS", "ICE", "FIGHTING", "POISON", "GROUND", "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY"]
 type_to_index_map = {type: index for index, type in enumerate(pokemon_types)}
+widgets = [[None for _ in range(8)] for _ in range(7)]
 effectivity = [
     (1,1,1,1,1,1,1,1,1,1,1,1,0.5,0,1,1,0.5,1),              #NORMAL
     (1,0.5,0.5,1,2,2,1,1,1,1,1,2,0.5,1,0.5,1,2,1),          #FIRE
@@ -28,7 +28,6 @@ effectivity = [
     (1,0.5,0.5,0.5,1,2,1,1,1,1,1,1,2,1,1,1,0.5,2),          #STE
     (1,0.5,1,1,1,1,2,0.5,1,1,1,1,1,1,2,2,0.5,1),            #faI
 ]
-# Convert result from a list of tuples to a list of lists
 result = [
     [0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0],
@@ -41,41 +40,31 @@ result = [
 
 def create_slot(row, col, initial_text=None):
     text_var = tk.StringVar(value=initial_text) if initial_text else None
-    if col < 3 and row > 0 and col!= 0:
-        entry_widget = tk.Entry(root, textvariable=text_var, state='normal', width=30, justify='center', font=('Arial', 12))
-        return entry_widget
-    elif col == 2 and row == 4:
-        entry_widget = tk.Button(root, textvariable=text_var, state='disabled',bg="white", width=30, justify='center', font=('Arial', 12))
-        return entry_widget
-    else:
-        entry_widget = tk.Button(root, textvariable=text_var,bg="white", width=30, justify='center', font=('Arial', 12))
-        
-        # Bind click event to change color
-        def on_click(event):
-            # print("Widget clicked")
-            if row > 0:  # Only apply to cells with row > 2
-                if entry_widget["bg"] == "white":
-                    entry_widget["bg"] = "yellow"
-                    entry_widget["textvariable"] = "OH"
-                elif entry_widget["bg"] == "yellow":
-                    entry_widget["bg"] = "green"
-                else:
-                    entry_widget["bg"] = "white"
-        
-        entry_widget.bind("<Button-1>", on_click)  # Bind left mouse button click
-        return entry_widget
+    widget = tk.Button(root, textvariable=text_var,bg="white", width=30, justify='center', font=('Arial', 12))
+    
+    def update_text(given_text):
+        widget.config(text=given_text)
+    widget.update_text = update_text
+    
 
-def read_effectiveness_data():
-    effectiveness_data = {}
-    with open('pokemon.csv', mode='r') as file:
-        csv_reader = csv.DictReader(file)
-        for row in csv_reader:
-            # Assuming the first column is 'Type' and the rest are effectiveness values
-            effectiveness_values = [float(row[col]) for col in csv_reader.fieldnames[1:]]
-            effectiveness_data[row['Type']] = effectiveness_values
-    return effectiveness_data
+    def on_click(event):
+        if row > 0:
+            if widget["bg"] == "white":
+                widget["bg"] = "yellow"
+            elif widget["bg"] == "yellow":
+                widget["bg"] = "green"
+            else:
+                widget["bg"] = "white"
+    widget.bind("<Button-1>", on_click)  # Bind left mouse button click
 
-effectiveness_data = read_effectiveness_data()
+    return widget
+
+def update_widgets():
+    global result, widgets
+    for row in range(1, 8):
+        for col in range(3, 8): 
+            widget = widgets[row-1][col] 
+            widget.update_text(result[row-2][col-3])
 
 def create_option_menu(row, col, initial_value, vector_index):
     selected_type = tk.StringVar(root)
@@ -92,7 +81,6 @@ def on_selection_change(var, row, col, vector_index):
     if row == 1 and 3 <= col <= 7:
         # Attacking type changed
         attacking_types[col-3] = selected_value
-        # Correctly calculate indices for accessing result
         if(selected_value != "NULL"):
             for i, defending_type in enumerate(defending_types, start=0):
                 atk_ind = type_to_index_map[selected_value]-1
@@ -121,10 +109,8 @@ def on_selection_change(var, row, col, vector_index):
                     eff = eff * effectivity[type_to_index_map[attacking_type]-1][def_2]
                 result[row-2][i]=eff
 
-        # Additional logic for updating defending types goes here
+    update_widgets()
     print(f"Updated vector: {vector_index} with value: {selected_value}")
-
-
 
 message = ""
 
@@ -155,48 +141,46 @@ def check_attacking_types():
 
     message = ""
 
-
 root = tk.Tk()
 root.title("Weakdle Solver by BlizzarpPurple")
 root.geometry("900x400")
 
-# Adjust the loop to include an additional column
-for col in range(0, 11):  # Now includes 8 columns
+for col in range(0, 11):
     root.columnconfigure(col, weight=1)
 for row in range(0, 9):
     root.rowconfigure(row, weight=1)
 
 for row in range(7):
-    for col in range(8):  # Adjusted to 8 columns
+    for col in range(8):
         if (row == 0 and col == 0):
             initial_text = "TYPE MATCH"
         elif (row == 0 and col == 1):
             initial_text = "TYPE1"
-        elif (row == 0 and col == 2):  # Special handling for row 1, columns 1 and 2
-            initial_text = "TYPE2"  # No initial text for combined cells
+        elif (row == 0 and col == 2):
+            initial_text = "TYPE2"
         else:
             initial_text = None
-        
-        create_slot(row, col, initial_text).grid(row=row+1, column=col, padx=1, pady=1, sticky='nsew')  # Adjust row index for the matrix
+        widgets[row][col] = create_slot(row, col, initial_text)
+        widgets[row][col].grid(row=row+1, column=col, padx=1, pady=1, sticky='nsew')  # Adjust row index for the matrix
 
-# Create the "defending" label in the new row, centered in column 5 and aligned to the right
-attacking_label = tk.Label(root, text="ATTACKING", fg="black", font=("Arial", 12))  # Reduced font size
-attacking_label.grid(row=0, column=5, sticky='ew', padx=(0, 10), pady=10)  # Adjusted padding as needed
+# Create the "attacking" and "defending" label in the new row, centered in column 5 and aligned to the right
+attacking_label = tk.Label(root, text="ATTACKING", fg="black", font=("Arial", 12))
+attacking_label.grid(row=0, column=5, sticky='ew', padx=(0, 10), pady=10)
 
-defending_label = tk.Label(root, text="DEFENDING", fg="black", font=("Arial", 12))  # Reduced font size
-defending_label.grid(row=0, column=1, sticky='ew', padx=(0, 10), pady=10)  # Adjusted padding as needed
+defending_label = tk.Label(root, text="DEFENDING", fg="black", font=("Arial", 12))
+defending_label.grid(row=0, column=1, sticky='ew', padx=(0, 10), pady=10)
 
-# Submit button
+# Submit or suggest button
 submit_button = tk.Button(root, text="SUGGEST", bg="green", fg="white", font=("Arial", 12), command=check_attacking_types)
-submit_button.grid(row=8, column=4, sticky='ew', padx=(0, 10), pady=10)  # Place the submit button in the first row and last column
+submit_button.grid(row=8, column=4, sticky='ew', padx=(0, 10), pady=10)
 
-# Setup the dropdown menu for suggestions in columns 2 to 6
-for col in range(3, 8):  # Loop through columns 2 to 6
-    create_option_menu(1, col, pokemon_types[1], 0)  # Pass vector_index as 0 for attacking types
+# Setup the dropdown menu for suggestions in columns 2 to 6 (attacking types)
+for col in range(3, 8):
+    create_option_menu(1, col, pokemon_types[1], 0)
 
-# Create OptionMenus for columns 1 and 2 in rows 2 to 6
-for row in range(2, 8):  # Correctly iterating over rows 2 to 6
-    for col in range(1, 3):  # Iterating over columns 1
-        create_option_menu(row, col, pokemon_types[0], row-1)  # Pass vector_index as row-1 for defending types
+# Create OptionMenus for columns 1 and 2 in rows 2 to 7 (defending types)
+for row in range(2, 8):
+    for col in range(1, 3):
+        create_option_menu(row, col, pokemon_types[0], row-1)
 
 root.mainloop()
