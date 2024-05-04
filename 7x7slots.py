@@ -87,43 +87,49 @@ def create_option_menu(row, col, initial_value, vector_index):
     selected_type.trace("w", lambda *args: on_selection_change(selected_type, row, col, vector_index))
 
 def on_selection_change(var, row, col, vector_index):
-    global attacking_types, defending_types, effectivity
+    global attacking_types, defending_types, effectivity, result
     selected_value = var.get()
     if row == 1 and 3 <= col <= 7:
         # Attacking type changed
         attacking_types[col-3] = selected_value
         # Correctly calculate indices for accessing result
         if(selected_value != "NULL"):
-            for i, row_defending in enumerate(defending_types, start=0):
-                atk_ind = type_to_index_map[selected_value]
+            for i, defending_type in enumerate(defending_types, start=0):
+                atk_ind = type_to_index_map[selected_value]-1
                 eff = 1
-                if (defending_types[i][0] != "NULL"):
-                    eff = eff * effectivity[atk_ind][type_to_index_map[defending_types[i][0]]-1]
-                if (defending_types[i][1] != "NULL"):
-                    eff = eff * effectivity[atk_ind][type_to_index_map[defending_types[i][1]]-1]
+                if (defending_type[0] != "NULL"):
+                    eff = eff * effectivity[atk_ind][type_to_index_map[defending_type[0]]-1]
+                if (defending_type[1] != "NULL"):
+                    eff = eff * effectivity[atk_ind][type_to_index_map[defending_type[1]]-1]
                 result[i][col-3]=eff
-
-            
-            # Ensure indices are integers and correctly reference the result list
-            # attacking_type_index = type_to_index_map[attacking_types[col-3]]
-            # defending_type1_index = type_to_index_map[defending_types[i-1][0]]
-            # defending_type2_index = type_to_index_map[defending_types[i-1][1]]
-            # # Access the correct tuple and element in the result list
-            # result[i-1][col-3] = effectivity[attacking_type_index][defending_type1_index] * effectivity[attacking_type_index][defending_type2_index]
     elif row >= 1 and row <= 7 and (col == 1 or col == 2):
         # Defending type changed
         if col == 1:
             defending_types[row-2][0] = selected_value
         elif col == 2:
             defending_types[row-2][1] = selected_value
+        if(selected_value!="NULL" and defending_types[row-2][0] != defending_types[row-2][1]):
+            for i, attacking_type in enumerate(attacking_types, start=0):
+                if attacking_type == "NULL":
+                    continue
+                eff = 1;
+                def_1 = type_to_index_map[defending_types[row-2][0]]-1
+                def_2 = type_to_index_map[defending_types[row-2][1]]-1
+                if (defending_types[row-2][0] != "NULL"):
+                    eff = eff * effectivity[type_to_index_map[attacking_type]-1][def_1]
+                if (defending_types[row-2][1] != "NULL"):
+                    eff = eff * effectivity[type_to_index_map[attacking_type]-1][def_2]
+                result[row-2][i]=eff
+
         # Additional logic for updating defending types goes here
     print(f"Updated vector: {vector_index} with value: {selected_value}")
+
 
 
 message = ""
 
 def check_attacking_types():
-    global attacking_types, defending_types, message  # Include message in the global declaration
+    global attacking_types, defending_types, message, result  # Include message in the global declaration
 
     # Check if any two elements in attacking_types are the same
     if len(set(attacking_types))!= len(attacking_types):
@@ -135,7 +141,9 @@ def check_attacking_types():
 
     # Print the current state of attacking_types and defending_types
     print("Current Attacking Types:", attacking_types)
-    print("Resulting effectivity:\n", result)
+    for i, row in enumerate(result, start=1):  # Start enumeration from 1 for row numbers
+        print(f"Row {i}: {row[0]} / {row[1]} / {row[2]} / {row[3]} / {row[4]}")  # Print both defending types for the row
+    print("\n")
     for i, row in enumerate(defending_types, start=1):  # Start enumeration from 1 for row numbers
         print(f"Row {i}: {row[0]} / {row[1]}")  # Print both defending types for the row
 
